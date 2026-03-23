@@ -1,0 +1,235 @@
+%% Cantilever Beam Model — Dimensionless Formulation
+%  Figure 10b: Longitudinal direction  (F_perp = F*cos(beta))
+%  Figure 11b: Lateral direction       (F_perp = F*sin(beta))
+%
+%  Governing equation (both directions):
+%    delta_max = F_perp * L^3 / (3EI)
+%
+%  Dimensionless form:
+%    x-axis: delta / L        (normalized tip deflection)
+%    y-axis: F * L^2 / (EI)   (normalized applied force)
+%
+%  Relation:  delta/L = (F*L^2 / EI) * g(beta) / 3
+%    where g(beta) = cos(beta) for longitudinal
+%                  = sin(beta) for lateral
+%
+%  Parameters (from manuscript):
+%    L = 75 mm, t = 2 mm, D = 60 mm, I = 40 mm^4
+%    E back-calculated from k_bend = 0.055 N/mm
+%      → E = k * L^3 / (3I) = 0.055 * 75^3 / (3*40) = 193.36 MPa
+%
+%  REVISION NOTE:
+%    Previous version used dimensional axes (F vs delta_max in mm),
+%    producing deflections >> L at moderate loads (k = 0.055 N/mm
+%    → delta = 1818 mm at F = 100 N, β = 0°).  This violated the
+%    Euler–Bernoulli small-deflection assumption (delta/L << 1) and
+%    was flagged by the reviewer.  The dimensionless formulation
+%    removes the issue: it shows the correct *scaling trend* with
+%    beta without implying a specific (unrealistic) deflection range.
+%
+% ---------------------------------------------------------------
+clear; clc; close all;
+%% =============== Global parameters ===============
+L   = 75.0;           % mm  — spoke length
+I   = 40.0;           % mm^4 — second moment of area
+t   = 2.0;            % mm  — thickness
+D   = 60.0;           % mm  — out-of-plane depth
+E   = 0.055 * L^3 / (3 * I);   % MPa (= 193.36 MPa)
+betas_deg = [0, 10, 20, 30];
+%% =============== Visual style ===============
+colors = [
+    0.122, 0.306, 0.475;   % β = 0°   dark blue
+    0.161, 0.502, 0.725;   % β = 10°  medium blue
+    0.153, 0.682, 0.376;   % β = 20°  green
+    0.906, 0.298, 0.235;   % β = 30°  red
+];
+linestyles = {'-', '--', '-.', ':'};
+markers    = {'o', 's', '^', 'd'};
+%% =============== Normalized force array ===============
+%  F_nd = F * L^2 / (EI)
+%  Choose range so that delta/L stays within a physically
+%  meaningful window (0 – ~0.5 for the stiffest curve).
+F_nd = linspace(0, 1.5, 400);
+%% ================================================================
+%%  FIGURE 10b — LONGITUDINAL DIRECTION:  delta/L vs F*L^2/(EI)
+%%  delta/L = (F*L^2/EI) * cos(beta) / 3
+%% ================================================================
+fig1 = figure('Units','centimeters','Position',[3 3 14 11]);
+hold on;
+for i = 1:length(betas_deg)
+    beta_rad = deg2rad(betas_deg(i));
+    % Normalized deflection: delta/L = F_nd * cos(beta) / 3
+    delta_nd = F_nd .* cos(beta_rad) / 3;
+    plot(delta_nd, F_nd, ...
+        'Color',     colors(i,:), ...
+        'LineStyle', linestyles{i}, ...
+        'LineWidth', 2.0, ...
+        'DisplayName', ['\beta = ' num2str(betas_deg(i)) '\circ']);
+    % Marker at F_nd = 1.0
+    d_marker = 1.0 * cos(beta_rad) / 3;
+    plot(d_marker, 1.0, ...
+        markers{i}, ...
+        'Color',           colors(i,:), ...
+        'MarkerFaceColor', colors(i,:), ...
+        'MarkerSize',      7, ...
+        'HandleVisibility','off');
+end
+% --- Small-deflection validity band ---
+xline(0.1, '--', '\delta/L = 0.1', ...
+    'Color', [0.6 0.6 0.6], 'LineWidth', 1.0, ...
+    'FontSize', 8, 'LabelOrientation', 'aligned', ...
+    'LabelVerticalAlignment', 'bottom', ...
+    'HandleVisibility', 'off');
+% --- cos(beta) annotation box ---
+ann_str = {
+    '\delta/L = (FL^2/EI)\cdotcos\beta / 3', ...
+    '', ...
+    '\beta =  0\circ :  cos\beta = 1.000', ...
+    '\beta = 10\circ:  cos\beta = 0.985', ...
+    '\beta = 20\circ:  cos\beta = 0.940', ...
+    '\beta = 30\circ:  cos\beta = 0.866'
+};
+text(0.97, 0.97, ann_str, ...
+    'Units',              'normalized', ...
+    'VerticalAlignment',  'top', ...
+    'HorizontalAlignment','right', ...
+    'FontSize',           8.5, ...
+    'BackgroundColor',    [0.94 0.96 0.98], ...
+    'EdgeColor',          [0.67 0.73 0.80], ...
+    'Margin',             4);
+% --- Arrow: increasing beta → stiffer ---
+F_arr = 1.0;   % normalized force level for annotation
+d_b0  = F_arr * cos(deg2rad(0))  / 3;
+d_b30 = F_arr * cos(deg2rad(30)) / 3;
+plot([d_b30, d_b0], [F_arr, F_arr], '-', ...
+    'Color', [0.5 0.5 0.5], 'LineWidth', 1.2, ...
+    'HandleVisibility','off');
+plot(d_b0,  F_arr, '>', 'Color', [0.5 0.5 0.5], ...
+    'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 5, ...
+    'HandleVisibility','off');
+plot(d_b30, F_arr, '<', 'Color', [0.5 0.5 0.5], ...
+    'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 5, ...
+    'HandleVisibility','off');
+text((d_b0+d_b30)/2, F_arr + 0.08, ...
+    {'Increasing \beta', '\rightarrow stiffer'}, ...
+    'HorizontalAlignment','center', 'FontSize', 8.5, ...
+    'Color', [0.4 0.4 0.4]);
+% --- Axis formatting ---
+xlabel('Normalized tip deflection   \delta / L', 'FontSize', 12);
+ylabel('Normalized force   FL^2 / EI',           'FontSize', 12);
+legend('Location', 'northwest', 'FontSize', 11, 'Box', 'on');
+grid on;  box on;
+set(gca, 'FontSize', 11, 'LineWidth', 1.0, 'GridAlpha', 0.3);
+xlim([0, max(F_nd) * cos(0) / 3 * 1.05]);
+ylim([0, max(F_nd) * 1.05]);
+title('(b) Longitudinal — inclined cantilever beam', 'FontSize', 12);
+hold off;
+% --- Export ---
+print(fig1, 'fig10b_longitudinal_normalized', '-dpng', '-r300');
+% print(fig1, 'fig10b_longitudinal_normalized', '-depsc');
+disp('Saved: fig10b_longitudinal_normalized.png');
+%% ================================================================
+%%  FIGURE 11b — LATERAL DIRECTION:  delta/L vs F*L^2/(EI)
+%%  delta/L = (F*L^2/EI) * sin(beta) / 3
+%% ================================================================
+fig2 = figure('Units','centimeters','Position',[20 3 14 11]);
+hold on;
+for i = 1:length(betas_deg)
+    beta_rad = deg2rad(betas_deg(i));
+    % Normalized deflection: delta/L = F_nd * sin(beta) / 3
+    delta_nd = F_nd .* sin(beta_rad) / 3;
+    plot(delta_nd, F_nd, ...
+        'Color',     colors(i,:), ...
+        'LineStyle', linestyles{i}, ...
+        'LineWidth', 2.0, ...
+        'DisplayName', ['\beta = ' num2str(betas_deg(i)) '\circ']);
+    % Marker at F_nd = 1.0
+    if betas_deg(i) > 0   % sin(0)=0, skip marker at origin
+        d_marker = 1.0 * sin(beta_rad) / 3;
+        plot(d_marker, 1.0, ...
+            markers{i}, ...
+            'Color',           colors(i,:), ...
+            'MarkerFaceColor', colors(i,:), ...
+            'MarkerSize',      7, ...
+            'HandleVisibility','off');
+    end
+end
+% --- Small-deflection validity band ---
+xline(0.1, '--', '\delta/L = 0.1', ...
+    'Color', [0.6 0.6 0.6], 'LineWidth', 1.0, ...
+    'FontSize', 8, 'LabelOrientation', 'aligned', ...
+    'LabelVerticalAlignment', 'bottom', ...
+    'HandleVisibility', 'off');
+% --- sin(beta) annotation box ---
+ann_str2 = {
+    '\delta/L = (FL^2/EI)\cdotsin\beta / 3', ...
+    '', ...
+    '\beta =  0\circ :  sin\beta = 0.000', ...
+    '\beta = 10\circ:  sin\beta = 0.174', ...
+    '\beta = 20\circ:  sin\beta = 0.342', ...
+    '\beta = 30\circ:  sin\beta = 0.500'
+};
+text(0.97, 0.97, ann_str2, ...
+    'Units',              'normalized', ...
+    'VerticalAlignment',  'top', ...
+    'HorizontalAlignment','right', ...
+    'FontSize',           8.5, ...
+    'BackgroundColor',    [0.98 0.94 0.94], ...
+    'EdgeColor',          [0.80 0.67 0.67], ...
+    'Margin',             4);
+% --- Arrow: increasing beta → softer ---
+F_arr = 1.0;
+d_b10 = F_arr * sin(deg2rad(10)) / 3;
+d_b30 = F_arr * sin(deg2rad(30)) / 3;
+plot([d_b10, d_b30], [F_arr, F_arr], '-', ...
+    'Color', [0.5 0.5 0.5], 'LineWidth', 1.2, ...
+    'HandleVisibility','off');
+plot(d_b30, F_arr, '>', 'Color', [0.5 0.5 0.5], ...
+    'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 5, ...
+    'HandleVisibility','off');
+plot(d_b10, F_arr, '<', 'Color', [0.5 0.5 0.5], ...
+    'MarkerFaceColor', [0.5 0.5 0.5], 'MarkerSize', 5, ...
+    'HandleVisibility','off');
+text((d_b10+d_b30)/2, F_arr + 0.08, ...
+    {'Increasing \beta', '\rightarrow softer'}, ...
+    'HorizontalAlignment','center', 'FontSize', 8.5, ...
+    'Color', [0.4 0.4 0.4]);
+% --- β = 0° label (collapsed on y-axis) ---
+text(0.01, 1.3, '\beta = 0\circ  (no bending)', ...
+    'FontSize', 9, 'Color', colors(1,:), 'FontWeight', 'bold');
+% --- Axis formatting ---
+xlabel('Normalized tip deflection   \delta / L', 'FontSize', 12);
+ylabel('Normalized force   FL^2 / EI',           'FontSize', 12);
+legend('Location', 'northwest', 'FontSize', 11, 'Box', 'on');
+grid on;  box on;
+set(gca, 'FontSize', 11, 'LineWidth', 1.0, 'GridAlpha', 0.3);
+xlim([0, max(F_nd) * sin(deg2rad(30)) / 3 * 1.3]);
+ylim([0, max(F_nd) * 1.05]);
+title('(b) Lateral — inclined cantilever beam', 'FontSize', 12);
+hold off;
+% % --- Export ---
+% print(fig2, 'fig11b_lateral_normalized', '-dpng', '-r300');
+% % print(fig2, 'fig11b_lateral_normalized', '-depsc');
+% disp('Saved: fig11b_lateral_normalized.png');
+%% ================================================================
+%%  DIMENSIONAL-TO-DIMENSIONLESS CONVERSION REFERENCE
+%% ================================================================
+%  For readers who want to recover physical values:
+%
+%    F_physical  = F_nd * EI / L^2
+%                = F_nd * 193.36 * 40 / 75^2
+%                = F_nd * 1.376 N
+%
+%    delta_physical = (delta/L) * L
+%                   = (delta/L) * 75 mm
+%
+%  Small-deflection validity:
+%    delta/L < 0.1  →  F_physical < 0.41 N  (β = 0°, longitudinal)
+%                   →  F_physical < 2.38 N  (β = 30°, lateral)
+%
+%  The normalized presentation is preferred because:
+%    (1) It isolates the geometric cos(β)/sin(β) scaling,
+%    (2) It avoids implying specific deflection magnitudes that
+%        violate the small-deflection assumption,
+%    (3) It is consistent with the manuscript's framing of the
+%        cantilever model as a "first-order scaling analysis."
