@@ -1,0 +1,166 @@
+%% =========================================================
+%  Figure 7 (a)(b)(c) – Kriging Design Maps
+%  (a) K_Y  (b) K_X  (c) log10(K_Y/K_X)
+%  Requires: Statistics and Machine Learning Toolbox (fitrgp)
+%% =========================================================
+clear; clc; close all;
+
+%% ── 1. DATA ───────────────────────────────────────────────
+% alpha = atan2d(2*pi*r, L),  L = 75 mm
+% r = 1,3,4,5,6  →  alpha = 4.8, 14.1, 18.5, 22.7, 26.7 deg
+alpha_KY = [4.8, 14.1, 18.5, 22.7, 26.7];
+beta_KY  = [0, 10, 20, 25, 30];
+
+KY_matrix = [
+    46.147, 44.875, 41.209, 38.581, 35.487;
+    24.762, 17.483, 14.976, 14.184, 13.384;
+    21.623, 16.433, 15.541, 14.987, 14.423;
+    19.531, 18.090, 16.694, 15.797, 14.821;
+    17.244, 16.757, 15.422, 14.637, 13.623;
+];  % rows = alpha, cols = beta  (N/mm)
+
+% r = 1,3,4,6  →  alpha = 4.8, 14.1, 18.5, 26.7 deg
+alpha_KX = [4.8, 14.1, 18.5, 26.7];
+beta_KX  = [0, 10, 20, 30];
+
+KX_matrix = [
+    0.059, 1.392, 4.102, 6.755;
+    0.055, 1.436, 4.709, 7.077;
+    0.041, 1.201, 4.152, 7.696;
+    0.019, 0.890, 3.121, 6.376;
+];  % (N/mm)
+
+%% ── 2. BUILD TRAINING ARRAYS ──────────────────────────────
+[A_KY, B_KY] = meshgrid(alpha_KY, beta_KY);  % rows=beta, cols=alpha
+X_KY = [A_KY(:), B_KY(:)];   % 25×2  [alpha, beta]
+y_KY = KY_matrix.';
+y_KY = y_KY(:);               % 25×1
+
+[A_KX, B_KX] = meshgrid(alpha_KX, beta_KX);
+X_KX = [A_KX(:), B_KX(:)];   % 16×2
+y_KX = KX_matrix.';
+y_KX = y_KX(:);               % 16×1
+
+%% ── 3. FIT KRIGING (GPR) MODELS ──────────────────────────
+gpr_KY = fitrgp(X_KY, y_KY, ...
+    'KernelFunction',   'matern52', ...
+    'Standardize',       true, ...
+    'OptimizeHyperparameters', {'KernelScale','Sigma'}, ...
+    'HyperparameterOptimizationOptions', ...
+        struct('ShowPlots', false, 'Verbose', 0, ...
+               'MaxObjectiveEvaluations', 40));
+
+gpr_KX = fitrgp(X_KX, y_KX, ...
+    'KernelFunction',   'matern52', ...
+    'Standardize',       true, ...
+    'OptimizeHyperparameters', {'KernelScale','Sigma'}, ...
+    'HyperparameterOptimizationOptions', ...
+        struct('ShowPlots', false, 'Verbose', 0, ...
+               'MaxObjectiveEvaluations', 40));
+
+%% ── 4. PREDICTION GRID ────────────────────────────────────
+a_vec = linspace(4,  28, 200);
+b_vec = linspace(0,  30, 200);
+[AG, BG] = meshgrid(a_vec, b_vec);   % 200×200, rows=beta, cols=alpha
+X_grid   = [AG(:), BG(:)];
+
+KY_map    = reshape(predict(gpr_KY, X_grid), size(AG));
+KX_map    = reshape(predict(gpr_KX, X_grid), size(AG));
+KX_safe   = max(KX_map, 1e-6);
+ratio_map = log10(KY_map ./ KX_safe);
+
+%% ── 5. FIGURE ─────────────────────────────────────────────
+fig = figure('Color','white','Units','centimeters','Position',[2 2 46 15]);
+
+tl = tiledlayout(1, 3, 'TileSpacing','compact', 'Padding','compact');
+title(tl, 'Figure 7.  Two-parameter Kriging design maps', ...
+      'FontSize', 13, 'FontWeight', 'bold');
+
+FS_LABEL = 13;
+FS_TITLE = 13;
+FS_TICK  = 11;
+FS_CB    = 10;
+MS       = 60;   % FE marker size
+
+% ── (a) K_Y ──────────────────────────────────────────────────
+ax1 = nexttile(1);
+contourf(BG, AG, KY_map, 20, 'LineColor','none');
+colormap(ax1, cool);
+hold on;
+contour(BG, AG, KY_map, 10, 'Color','w', 'LineWidth',0.45, 'LineStyle','-');
+scatter(X_KY(:,2), X_KY(:,1), MS, 'w', 'filled', ...
+        'MarkerEdgeColor','k', 'LineWidth',0.9);
+hold off;
+cb1 = colorbar;
+cb1.Label.String = 'K_Y (N/mm)';
+cb1.FontSize = FS_CB;
+xlabel('\beta (deg)', 'FontSize', FS_LABEL);
+ylabel('\alpha (deg)', 'FontSize', FS_LABEL);
+title('(a)  K_Y — Kriging Prediction', 'FontWeight','bold', 'FontSize', FS_TITLE);
+xlim([0 30]); ylim([4 28]);
+set(ax1, 'FontSize', FS_TICK);
+legend('FE data', 'Location','northeast', 'FontSize',10, ...
+       'Box','off', 'TextColor','w');
+
+% ── (b) K_X ──────────────────────────────────────────────────
+ax2 = nexttile(2);
+contourf(BG, AG, KX_map, 20, 'LineColor','none');
+colormap(ax2, flipud(hot(256)));
+hold on;
+contour(BG, AG, KX_map, 10, 'Color','w', 'LineWidth',0.45);
+scatter(X_KX(:,2), X_KX(:,1), MS, 'w', 'filled', ...
+        'MarkerEdgeColor','k', 'LineWidth',0.9);
+hold off;
+cb2 = colorbar;
+cb2.Label.String = 'K_X (N/mm)';
+cb2.FontSize = FS_CB;
+xlabel('\beta (deg)', 'FontSize', FS_LABEL);
+ylabel('\alpha (deg)', 'FontSize', FS_LABEL);
+title('(b)  K_X — Kriging Prediction', 'FontWeight','bold', 'FontSize', FS_TITLE);
+xlim([0 30]); ylim([4 28]);
+set(ax2, 'FontSize', FS_TICK);
+legend('FE data', 'Location','northeast', 'FontSize',10, ...
+       'Box','off', 'TextColor','w');
+
+% ── (c) Stiffness Ratio ───────────────────────────────────────
+ax3 = nexttile(3);
+contourf(BG, AG, ratio_map, 20, 'LineColor','none');
+colormap(ax3, rdylgn_cmap(256));
+hold on;
+contour(BG, AG, ratio_map, 10, 'Color','w', 'LineWidth',0.45);
+scatter(X_KY(:,2), X_KY(:,1), MS, 'w', 'filled', ...
+        'MarkerEdgeColor','k', 'LineWidth',0.9);
+hold off;
+cb3 = colorbar;
+cb3.Label.String = 'log_{10}(K_Y / K_X)';
+cb3.FontSize = FS_CB;
+xlabel('\beta (deg)', 'FontSize', FS_LABEL);
+ylabel('\alpha (deg)', 'FontSize', FS_LABEL);
+title('(c)  Stiffness Ratio  log_{10}(K_Y/K_X)', 'FontWeight','bold', 'FontSize', FS_TITLE);
+xlim([0 30]); ylim([4 28]);
+set(ax3, 'FontSize', FS_TICK);
+legend('FE data', 'Location','northeast', 'FontSize',10, ...
+       'Box','off', 'TextColor','w');
+
+%% ── Export ────────────────────────────────────────────────
+% exportgraphics(fig, 'Figure7_abc.png', 'Resolution', 300);
+% fprintf('Figure saved: Figure7_abc.png\n');
+
+
+%% =========================================================
+%  LOCAL HELPER – RdYlGn colormap (256 colors)
+%  Red → Yellow → Green
+%% =========================================================
+function cmap = rdylgn_cmap(n)
+    anchors = [0.647  0.000  0.149;   % dark red
+               0.957  0.427  0.263;   % orange-red
+               0.996  0.878  0.545;   % light yellow
+               1.000  1.000  0.749;   % pale yellow
+               0.851  0.937  0.545;   % light green
+               0.400  0.741  0.388;   % medium green
+               0.000  0.408  0.216];  % dark green
+    x  = linspace(0, 1, size(anchors,1));
+    xi = linspace(0, 1, n);
+    cmap = interp1(x, anchors, xi, 'pchip');
+    cmap = max(0, min(1, cmap));
+end
