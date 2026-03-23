@@ -8,12 +8,15 @@
 
 | File | Description |
 |------|-------------|
-| `discrete_curved_spoke_design.m` | Generates 3D spoke geometry and exports ABAQUS `.inp` file for 72-spoke circular array |
-| `Kriging_analytical.m` | Builds Kriging (GPR) surrogate models and plots 2-parameter design maps (K_Y, K_X, stiffness ratio) |
-| `alpha_multi_axial_stiffness.m` | Parses FE results by helix angle α (r = 1, 3, 4, 6) and plots axial/lateral stiffness curves |
-| `beta_multi_axial_stiffness.m` | Parses FE results by bias angle β (0°, 10°, 20°, 30°) and plots force–displacement curves |
-| `radial_force_distribution.m` | Plots polar radial force distribution for continuous and discrete spoke configurations |
+| `discrete_curved_spoke_design.m` | Generates 3D spoke geometry using a cosine-based backbone profile, creates structured hexahedral mesh (C3D8R) for 72 spokes in a circular array, and exports an ABAQUS-compatible `.inp` file |
+| `Kriging_analytical.m` | Fits Gaussian Process Regression (Kriging) surrogate models to FE stiffness data over (α, β) parameter space and generates two-parameter design maps for K_X, K_Y, and their ratio |
+| `alpha_multi_axial_stiffness.m` | Parses FE force-displacement data from Excel and computes axial/lateral stiffness for varying helix angle α (r = 1, 3, 4, 6 mm), extracting initial slope stiffness from the first 30% of the F-δ curve |
+| `beta_multi_axial_stiffness.m` | Parses FE force-displacement data and evaluates multi-axial stiffness for varying bias angle β (0°–30°), plotting vertical, longitudinal, and lateral F-δ curves with optional displacement markers at U = 5 mm |
+| `radial_force_distribution.m` | Loads radial force data from CSV files for continuous and discrete spoke configurations, and generates polar plots comparing force distribution across spoke types and β angles |
 | `Inclined_Cantilever_Beam_Deflection_Visualization.m` | Analytical visualization of inclined cantilever beam deflection under vertical load |
+| `cantilever_longitudinal.m` | Implements the inclined cantilever beam model for longitudinal stiffness (Eq. 26), plotting force vs. local tip deflection for β = 0°–30° and showing stiffness increase with inclination angle |
+| `cantilever_lateral.m` | Implements the inclined cantilever beam model for lateral stiffness (Eq. 30), plotting force vs. local normal deflection for β = 0°–30° and showing compliance increase with inclination angle |
+| `keff_alpha_analytical.m` | Computes normalized effective longitudinal stiffness k_eff(α) using the axial-bending projection model (Eq. 10), marking reference design points at α = 4.8°, 14.1°, 18.5°, 26.7° and quantifying the 17.7% stiffness drop across the studied curvature range |
 
 ---
 
@@ -21,8 +24,8 @@
 
 | Symbol | Description | Range |
 |--------|-------------|-------|
-| α (alpha) | Helix angle of spoke | 4.8° – 26.7° |
-| β (beta) | Bias angle of spoke | 0° – 30° |
+| α (alpha) | In-plane curvature angle of spoke | 4.8° – 26.7° |
+| β (beta) | Out-of-plane inclination angle of spoke | 0° – 30° |
 | r | Apex height of backbone curve | 1 – 6 mm |
 | L | Vertical height of spoke | 75 mm |
 | D | Depth of spoke | 60 mm |
@@ -31,11 +34,12 @@
 
 ## ✨ Features
 
-- **Spoke geometry generation** — Defines backbone curve, thickness distribution, and 3D hexahedral mesh
+- **Spoke geometry generation** — Defines cosine-based backbone curve, thickness distribution, and 3D hexahedral mesh
 - **ABAQUS export** — Writes `.inp` file for 72-spoke circular array (C3D8R elements)
-- **Multi-axial stiffness analysis** — Extracts K_Y (axial) and K_X (lateral) stiffness from FE simulation data
+- **Multi-axial stiffness analysis** — Extracts K_Y (lateral) and K_X (longitudinal) stiffness from FE simulation data
 - **Kriging surrogate modeling** — Fits GPR models (Matérn 5/2 kernel) over (α, β) parameter space
-- **Design maps** — Contour plots of K_Y, K_X, and log₁₀(K_Y/K_X) for rapid design exploration
+- **Design maps** — Contour plots of K_Y, K_X, and log₁₀(K_Y/K_X) for rapid inverse design
+- **Analytical beam models** — Closed-form stiffness expressions (Eq. 10, 26, 30) for longitudinal and lateral directions
 - **Radial force visualization** — Polar plots comparing continuous and discrete spoke configurations
 
 ---
@@ -50,6 +54,9 @@
 | `beta_multi_axial_stiffness.m` | R2021b+ | None |
 | `radial_force_distribution.m` | R2021b+ | None |
 | `Inclined_Cantilever_Beam_Deflection_Visualization.m` | R2021b+ | None |
+| `cantilever_longitudinal.m` | R2021b+ | None |
+| `cantilever_lateral.m` | R2021b+ | None |
+| `keff_alpha_analytical.m` | R2021b+ | None |
 
 > Tested on **MATLAB R2023b**.
 
@@ -79,7 +86,14 @@ run('alpha_multi_axial_stiffness.m')
 ```matlab
 % Requires Statistics and Machine Learning Toolbox
 run('Kriging_analytical.m')
-% Output: Figure 7 (a) K_Y map  (b) K_X map  (c) Stiffness ratio map
+% Output: Figure 7 — (a) K_X map  (b) K_Y map  (c) Stiffness ratio map
+```
+
+**5. Run analytical beam models**
+```matlab
+run('keff_alpha_analytical.m')       % Figure 5b  — k_eff vs α (Eq. 10)
+run('cantilever_longitudinal.m')     % Figure 10b — longitudinal stiffness vs β (Eq. 26)
+run('cantilever_lateral.m')          % Figure 11b — lateral stiffness vs β (Eq. 30)
 ```
 
 ---
@@ -89,9 +103,17 @@ run('Kriging_analytical.m')
 ### Kriging Design Maps (Figure 7)
 | Panel | Variable | Description |
 |-------|----------|-------------|
-| (a) | K_Y | Axial stiffness [N/mm] — cool colormap |
-| (b) | K_X | Lateral stiffness [N/mm] — hot colormap |
+| (a) | K_X | Longitudinal stiffness [N/mm] |
+| (b) | K_Y | Lateral stiffness [N/mm] |
 | (c) | log₁₀(K_Y / K_X) | Stiffness anisotropy ratio — RdYlGn colormap |
+
+### Analytical Model Summary
+
+| Script | Equation | Key Result |
+|--------|----------|------------|
+| `keff_alpha_analytical.m` | Eq. (10): k_eff = k_ax·cos²α + k_b·sin²α | 17.7% stiffness drop from α = 4.8° to 26.7° |
+| `cantilever_longitudinal.m` | Eq. (26): δ = F·cosβ·L³/3EI | Stiffness increases with β |
+| `cantilever_lateral.m` | Eq. (30): δ = F·sinβ·L³/3EI | Compliance increases with β |
 
 ### Stiffness Data (FE simulation)
 
@@ -124,9 +146,20 @@ The following external data files are needed for stiffness analysis scripts:
 ## 📌 Method Summary
 
 - **Surrogate model**: Gaussian Process Regression (Kriging) with Matérn 5/2 kernel
-- **Hyperparameter optimization**: Bayesian optimization (40 evaluations)
+- **Hyperparameter optimization**: Bayesian optimization (40 evaluations), 5-fold CV for K_Y, 4-fold CV for K_X
 - **Mesh type**: Structured hexahedral (C3D8R) for ABAQUS/Explicit
 - **Stiffness extraction**: Initial slope (linear regression on first 30% of F-δ curve)
+- **Analytical model**: Euler-Bernoulli cantilever beam with axial-bending projection (Eqs. 10, 26, 30)
+
+---
+
+## 📄 Related Publication
+
+This repository accompanies the following manuscript:
+
+> Heeseung Ju, "Directional Stiffness Decoupling in Meta-Wheels via Three-Dimensional Discrete Curved Spokes," *under review*, 2026.
+
+> ⚠️ MATLAB codes will be made publicly available upon acceptance of the manuscript, or provided upon reasonable request to the corresponding author.
 
 ---
 
