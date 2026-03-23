@@ -157,7 +157,7 @@ The following external data files are needed for stiffness analysis scripts:
 
 This repository accompanies the following manuscript:
 
-> Heeseung Ju, "Directional Stiffness Decoupling in Meta-Wheels via Three-Dimensional Discrete Curved Spokes," *under review*, 2026.
+> H.Han, "Directional Stiffness Decoupling in Meta-Wheels via Three-Dimensional Discrete Curved Spokes," *under review*, 2026.
 
 > ⚠️ MATLAB codes will be made publicly available upon acceptance of the manuscript, or provided upon reasonable request to the corresponding author.
 
