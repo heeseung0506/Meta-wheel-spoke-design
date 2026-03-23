@@ -16,7 +16,7 @@
 | `Inclined_Cantilever_Beam_Deflection_Visualization.m` | Analytical visualization of inclined cantilever beam deflection under vertical load |
 | `cantilever_longitudinal.m` | Implements the inclined cantilever beam model for longitudinal stiffness (Eq. 26), plotting force vs. local tip deflection for β = 0°–30° and showing stiffness increase with inclination angle |
 | `cantilever_lateral.m` | Implements the inclined cantilever beam model for lateral stiffness (Eq. 30), plotting force vs. local normal deflection for β = 0°–30° and showing compliance increase with inclination angle |
-| `keff_alpha_analytical.m` | Computes normalized effective longitudinal stiffness k_eff(α) using the axial-bending projection model (Eq. 10), marking reference design points at α = 4.8°, 14.1°, 18.5°, 26.7° and quantifying the 17.7% stiffness drop across the studied curvature range |
+| `Longitudinal Stiff Eq.(10).m` | Computes normalized effective longitudinal stiffness k_eff(α) using the axial-bending projection model (Eq. 10), marking reference design points at α = 4.8°, 14.1°, 18.5°, 26.7° and quantifying the 17.7% stiffness drop across the studied curvature range |
 
 ---
 
