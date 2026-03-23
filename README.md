@@ -14,8 +14,7 @@
 | `beta_multi_axial_stiffness.m` | Parses FE force-displacement data and evaluates multi-axial stiffness for varying bias angle β (0°–30°), plotting vertical, longitudinal, and lateral F-δ curves with optional displacement markers at U = 5 mm |
 | `radial_force_distribution.m` | Loads radial force data from CSV files for continuous and discrete spoke configurations, and generates polar plots comparing force distribution across spoke types and β angles |
 | `Inclined_Cantilever_Beam_Deflection_Visualization.m` | Analytical visualization of inclined cantilever beam deflection under vertical load |
-| `cantilever_longitudinal.m` | Implements the inclined cantilever beam model for longitudinal stiffness (Eq. 26), plotting force vs. local tip deflection for β = 0°–30° and showing stiffness increase with inclination angle |
-| `cantilever_lateral.m` | Implements the inclined cantilever beam model for lateral stiffness (Eq. 30), plotting force vs. local normal deflection for β = 0°–30° and showing compliance increase with inclination angle |
+| `Cantilever_Longitudinal,Lateral.m` | Implements inclined cantilever beam models for both longitudinal (Eq. 26: δ = F·cosβ·L³/3EI) and lateral (Eq. 30: δ = F·sinβ·L³/3EI) directions in a single 1×2 subplot, showing stiffness increase and compliance increase with β respectively |
 | `Longitudinal Stiff Eq.(10).m` | Computes normalized effective longitudinal stiffness k_eff(α) using the axial-bending projection model (Eq. 10), marking reference design points at α = 4.8°, 14.1°, 18.5°, 26.7° and quantifying the 17.7% stiffness drop across the studied curvature range |
 
 ---
@@ -54,9 +53,8 @@
 | `beta_multi_axial_stiffness.m` | R2021b+ | None |
 | `radial_force_distribution.m` | R2021b+ | None |
 | `Inclined_Cantilever_Beam_Deflection_Visualization.m` | R2021b+ | None |
-| `cantilever_longitudinal.m` | R2021b+ | None |
-| `cantilever_lateral.m` | R2021b+ | None |
-| `keff_alpha_analytical.m` | R2021b+ | None |
+| `Cantilever_Longitudinal,Lateral.m` | R2021b+ | None |
+| `Longitudinal Stiff Eq.(10).m` | R2021b+ | None |
 
 > Tested on **MATLAB R2023b**.
 
@@ -91,9 +89,8 @@ run('Kriging_analytical.m')
 
 **5. Run analytical beam models**
 ```matlab
-run('keff_alpha_analytical.m')       % Figure 5b  — k_eff vs α (Eq. 10)
-run('cantilever_longitudinal.m')     % Figure 10b — longitudinal stiffness vs β (Eq. 26)
-run('cantilever_lateral.m')          % Figure 11b — lateral stiffness vs β (Eq. 30)
+run('Longitudinal Stiff Eq.(10).m')       % Figure 5b  — k_eff vs α (Eq. 10)
+run('Cantilever_Longitudinal,Lateral.m')  % Figure 10b & 11b — longitudinal & lateral vs β
 ```
 
 ---
@@ -111,9 +108,9 @@ run('cantilever_lateral.m')          % Figure 11b — lateral stiffness vs β (E
 
 | Script | Equation | Key Result |
 |--------|----------|------------|
-| `keff_alpha_analytical.m` | Eq. (10): k_eff = k_ax·cos²α + k_b·sin²α | 17.7% stiffness drop from α = 4.8° to 26.7° |
-| `cantilever_longitudinal.m` | Eq. (26): δ = F·cosβ·L³/3EI | Stiffness increases with β |
-| `cantilever_lateral.m` | Eq. (30): δ = F·sinβ·L³/3EI | Compliance increases with β |
+| `Longitudinal Stiff Eq.(10).m` | Eq. (10): k_eff = k_ax·cos²α + k_b·sin²α | 17.7% stiffness drop from α = 4.8° to 26.7° |
+| `Cantilever_Longitudinal,Lateral.m` | Eq. (26): δ = F·cosβ·L³/3EI | Longitudinal stiffness increases with β |
+| `Cantilever_Longitudinal,Lateral.m` | Eq. (30): δ = F·sinβ·L³/3EI | Lateral compliance increases with β |
 
 ### Stiffness Data (FE simulation)
 
@@ -157,7 +154,7 @@ The following external data files are needed for stiffness analysis scripts:
 
 This repository accompanies the following manuscript:
 
-> H.Han, "Directional Stiffness Decoupling in Meta-Wheels via Three-Dimensional Discrete Curved Spokes," *under review*, 2026.
+> Heeseung Ju, "Directional Stiffness Decoupling in Meta-Wheels via Three-Dimensional Discrete Curved Spokes," *under review*, 2026.
 
 > ⚠️ MATLAB codes will be made publicly available upon acceptance of the manuscript, or provided upon reasonable request to the corresponding author.
 
