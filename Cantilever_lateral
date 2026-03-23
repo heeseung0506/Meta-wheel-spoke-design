@@ -1,0 +1,140 @@
+%% Cantilever Beam Model — Lateral Direction (Figure 11b)
+% Force vs Local Tip Deflection
+%
+% Eq. (30):  delta_local = F * sin(beta) * L^3 / (3EI)
+%
+% PURPOSE: Qualitative illustration that increasing beta increases the
+%          transverse (bending) component of the lateral load,
+%          → local tip deflection increases → effective lateral stiffness decreases.
+%
+% Physical interpretation:
+%   At beta = 0°: F_perp = F*sin(0) = 0  → purely axial, no bending
+%   At beta > 0°: F_perp = F*sin(beta)   → bending grows with beta
+%   → Higher beta produces larger deflection → softer lateral response
+%
+% Companion to: cantilever_longitudinal.m  (Figure 10b, uses cosβ)
+% ────────────────────────────────────────────────────────────────────────
+
+clear; clc; close all;
+
+%% ── Parameters ───────────────────────────────────────────────────────────
+L  = 75.0;            % mm   — spoke height
+t  = 2.0;             % mm   — thickness
+D  = 60.0;            % mm   — out-of-plane depth
+I  = D * t^3 / 12;    % mm^4 — second moment of area = 40 mm^4
+E  = 200.0;           % MPa  — representative PU value (range: 50–500 MPa)
+
+fprintf('I = %.1f mm^4,  E = %.0f MPa\n', I, E);
+
+%% ── Force range: small-deflection regime (delta_max < 0.1L) ─────────────
+%   Most compliant case for lateral: beta = 90° → sin(90°) = 1 (upper bound)
+%   but within studied range beta_max = 30°, sin(30°) = 0.5
+%   Use beta = 30° as reference for F_max determination.
+%
+%   k_cant(beta=30) = 3EI / (sin(30°) * L^3)  [effective bending stiffness]
+%   F_max s.t. delta(beta=30) = 0.10*L
+
+beta_ref   = deg2rad(30);
+k_b30      = 3 * E * I / L^3;          % N/mm — raw cantilever stiffness
+delta_lim  = 0.10 * L;                 % mm   — 10% of span
+F_max      = delta_lim * k_b30 / sin(beta_ref);   % N — upper force limit
+F          = linspace(0, F_max, 500);  % N
+
+fprintf('k_cantilever = %.5f N/mm\n', k_b30);
+fprintf('F_max        = %.4f N  (delta_max at beta=30deg = %.2f mm = 0.1L)\n', ...
+        F_max, F_max * sin(beta_ref) * L^3 / (3*E*I));
+
+%% ── Plot ─────────────────────────────────────────────────────────────────
+betas_deg  = [0, 10, 20, 30];
+colors     = [0.122 0.306 0.475;
+              0.161 0.502 0.725;
+              0.153 0.682 0.376;
+              0.906 0.298 0.235];
+linestyles = {'-','--','-.',':'};
+markers    = {'o','s','^','d'};
+
+figure('Units','centimeters','Position',[5 5 14 11]);
+hold on;
+
+delta_ends = zeros(1, length(betas_deg));
+
+for i = 1:length(betas_deg)
+    br    = deg2rad(betas_deg(i));
+    % Eq. (30): delta_local = F * sin(beta) * L^3 / (3EI)
+    delta = F .* sin(br) .* L^3 ./ (3 * E * I);
+    delta_ends(i) = delta(end);
+
+    % beta = 0° gives zero deflection — skip plotting the line (delta=0)
+    if betas_deg(i) == 0
+        % Plot as a single point at origin only
+        plot(0, 0, markers{i}, ...
+             'Color',           colors(i,:), ...
+             'MarkerFaceColor', colors(i,:), ...
+             'MarkerSize',      7, ...
+             'DisplayName',     ['\beta = 0\circ :  \delta_{local} = 0 (axial only)']);
+        continue;
+    end
+
+    plot(delta, F, ...
+         'Color',     colors(i,:), ...
+         'LineStyle', linestyles{i}, ...
+         'LineWidth', 2.0, ...
+         'DisplayName', ['\beta = ' num2str(betas_deg(i)) '\circ']);
+
+    % Marker at 70% of F_max
+    Fm = 0.70 * F_max;
+    dm = Fm * sin(br) * L^3 / (3*E*I);
+    plot(dm, Fm, markers{i}, ...
+         'Color',           colors(i,:), ...
+         'MarkerFaceColor', colors(i,:), ...
+         'MarkerSize',      7, ...
+         'HandleVisibility','off');
+end
+
+%% ── Formatting ───────────────────────────────────────────────────────────
+max_delta = max(delta_ends);
+xlim([0, max_delta * 1.10]);
+ylim([0, F_max * 1.05]);
+xlabel('Local normal deflection  \delta_{local}  (mm)', 'FontSize', 12);
+ylabel('Applied load  F_Y  (N)',                         'FontSize', 12);
+title('Force–Local Deflection Curve for Inclined Cantilever Beam', ...
+      'FontSize', 11, 'FontWeight', 'normal');
+legend('Location','northwest', 'FontSize', 10, 'Box','on');
+grid on; box on;
+set(gca, 'FontSize',11, 'LineWidth',1.0, 'GridAlpha',0.3);
+
+%% ── sin(beta) annotation ─────────────────────────────────────────────────
+ann = {'\delta_{local} \propto sin\beta \cdot F', '', ...
+       ['\beta =  0\circ :  sin\beta = ' sprintf('%.3f', sin(deg2rad( 0)))], ...
+       ['\beta = 10\circ:  sin\beta = ' sprintf('%.3f', sin(deg2rad(10)))], ...
+       ['\beta = 20\circ:  sin\beta = ' sprintf('%.3f', sin(deg2rad(20)))], ...
+       ['\beta = 30\circ:  sin\beta = ' sprintf('%.3f', sin(deg2rad(30)))]};
+text(0.97, 0.97, ann, ...
+     'Units','normalized', 'VerticalAlignment','top', ...
+     'HorizontalAlignment','right', 'FontSize',8.5, ...
+     'BackgroundColor',[0.94 0.96 0.98], ...
+     'EdgeColor',     [0.67 0.73 0.80], 'Margin',4);
+
+%% ── "Increasing beta → more compliant" arrow ─────────────────────────────
+Fa    = 0.55 * F_max;
+d_b10 = Fa * sin(deg2rad(10)) * L^3 / (3*E*I);
+d_b30 = Fa * sin(deg2rad(30)) * L^3 / (3*E*I);
+plot([d_b10 d_b30], [Fa Fa], '-', 'Color',[.5 .5 .5], 'LineWidth',1.2, ...
+     'HandleVisibility','off');
+plot(d_b30, Fa, '>', 'Color',[.5 .5 .5], 'MarkerFaceColor',[.5 .5 .5], ...
+     'MarkerSize',5, 'HandleVisibility','off');
+plot(d_b10, Fa, '<', 'Color',[.5 .5 .5], 'MarkerFaceColor',[.5 .5 .5], ...
+     'MarkerSize',5, 'HandleVisibility','off');
+text((d_b10+d_b30)/2, Fa*1.14, {'Increasing \beta', '\rightarrow more compliant'}, ...
+     'HorizontalAlignment','center', 'FontSize',8.5, 'Color',[0.4 0.4 0.4]);
+
+%% ── Qualitative note ─────────────────────────────────────────────────────
+text(0.01, 0.01, ...
+     '* Qualitative illustration; E = 200 MPa (representative PU)', ...
+     'Units','normalized', 'FontSize',7.5, 'Color',[0.45 0.45 0.45], ...
+     'VerticalAlignment','bottom');
+
+hold off;
+
+%% ── Export (uncomment to save) ───────────────────────────────────────────
+% print(gcf, 'fig11b_cantilever_lateral', '-dpng', '-r300');
