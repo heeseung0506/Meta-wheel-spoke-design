@@ -1,6 +1,6 @@
 <div align="center">
 
-# Meta-Wheel Spoke Design
+# 🔘🏎🏍🚗Meta-Wheel Spoke Design
 
 **MATLAB scripts for parametric design, FE mesh generation, stiffness analysis,**  
 **and Kriging surrogate modeling of a meta-wheel with 3D discrete curved spokes.**
